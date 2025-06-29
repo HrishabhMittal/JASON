@@ -3,10 +3,9 @@
 make
 for i in ./tests/json-checker/*; do
     echo ----------------------------------------------
-    echo ----------------------------------------------
-    echo ------ FILE OUTPUT ------
-    cat $i
-    echo ------ CODE RESULT ------
+    echo ---------------------FILE---------------------
     echo checking on $i
+    # cat $i
+    echo ------------------CODE OUTPUT-----------------
     ./main $i
 done

@@ -12,7 +12,6 @@ enum class TokenType {
     TK_EOF
 };
 
-
 struct Token {
     TokenType ttype;
     std::string value;

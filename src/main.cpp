@@ -1,13 +1,15 @@
-#include "lexer.cpp"
+#include "parser.cpp"
 #include <iostream>
 #include <ostream>
+
 int main(int argc,char**argv) {
     if (argc!=2) return 1;
-    JsonLexer l(argv[1]);
-    Token t;
-    t.ttype=TokenType::IDENTIFIER;
-    while (t.ttype!=TokenType::TK_EOF) {
-        t=l.gettoken();
-        std::cout<<t<<std::endl;
+    try {
+        JsonParser p(argv[1]);
+        auto x=p.ParseJSON();
+    } catch (...) {
+        std::cout<<"parsing unsuccessful!"<<std::endl;
+        return 1;
     }
+    std::cout<<"parsing successful"<<std::endl;
 }
