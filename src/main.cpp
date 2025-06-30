@@ -1,11 +1,13 @@
 #include "parser.cpp"
+#include <fstream>
 #include <iostream>
 #include <ostream>
 
 int main(int argc,char**argv) {
     if (argc!=2) return 1;
     try {
-        JsonParser p(argv[1]);
+        std::ifstream file(argv[1]);
+        JsonParser p(file);
         auto x=p.ParseJSON();
     } catch (...) {
         std::cout<<"parsing unsuccessful!"<<std::endl;
