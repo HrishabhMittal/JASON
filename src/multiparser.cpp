@@ -1,15 +1,13 @@
 #include "lexer.cpp"
+#include <fstream>
 #include <iostream>
 #include <istream>
+#include <iterator>
+#include <ostream>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <vector>
-std::string repeat(const std::string& s,int i) {
-    std::string str;
-    for (int j=0;j<i;j++) str+=s;
-    return str;
-}
 enum ValueType {
     ARRAY,
     OBJECT,
@@ -17,10 +15,13 @@ enum ValueType {
     NUMBER,
     TRUE,
     FALSE,
-    VT_NULL,
-    INVALID
+    VT_NULL
 };
-
+std::string repeat(const std::string& s,int i) {
+    std::string str;
+    for (int j=0;j<i;j++) str+=s;
+    return str;
+}
 struct Value {
     ValueType value;
     std::string str;
@@ -28,14 +29,50 @@ struct Value {
     std::vector<Value> arr;
     std::unordered_map<std::string,Value> obj;
 };
-class JsonParser {
-    JsonLexer l;
+double to_number(const std::string& str) {
+    try {
+        size_t idx = 0;
+        double val = std::stod(str, &idx);
+        if (idx != str.size()) {
+            throw std::invalid_argument("Invalid number: " + str);
+        }
+        return val;
+    } catch (...) {
+        throw std::runtime_error("Invalid number: " + str);
+    }
+}
+class JSONParser;
+class JSON {
+    std::vector<Token> tokens;
+public:
+    JSON(const std::string& filename) {
+        std::ifstream file(filename);
+        JsonLexer jl(file);
+        Token v=jl.gettoken();
+        while (v.ttype!=TokenType::TK_EOF) {
+            tokens.push_back(v);
+            v=jl.gettoken();
+        }
+    }
+    Value parse();
+};
+class JSONParser {
+    std::vector<Token>& tokens;
+    int start,end,cur;
     Token currentToken;
+    Token gettoken() {
+        if (cur<=end) return tokens[cur++];
+        return {TokenType::TK_EOF};
+    }
+    Token peektoken() {
+        if (cur<=end) return tokens[cur];
+        return {TokenType::TK_EOF};
+    }
     void next() {
-        currentToken = l.gettoken();
+        currentToken = gettoken();
     }
     bool matchnext(TokenType type, const std::string& val = "") {
-        Token x=l.peektoken();
+        Token x=peektoken();
         if (x.ttype==TokenType::TK_EOF&&type==TokenType::TK_EOF) return 1;
         return x.ttype == type && (val.empty() || x.value == val);
     }
@@ -43,8 +80,14 @@ class JsonParser {
         return currentToken.ttype == type && (val.empty() || (!currentToken.value.empty() && currentToken.value == val));
     }
     Token expect(TokenType type, const std::string& val = "") {
-        if (!match(type,val)) {
-            throw std::runtime_error("expect failed!");
+        if (!match(type, val)) {
+            if (currentToken.line!=nullptr) {
+            throw std::runtime_error("Unexpected token: \""+currentToken.value+"\", at line: "+std::to_string(currentToken.lineno)+
+                    "\n    "+*currentToken.line+
+                    "\n    "+repeat(" ",currentToken.startindex)+repeat("^", currentToken.value.size()));
+            } else {
+                throw std::runtime_error("Unexpected token: \""+currentToken.value+"\", at line: "+std::to_string(currentToken.lineno));
+            }
         }
         Token tok = currentToken;
         next();
@@ -97,7 +140,7 @@ class JsonParser {
         } else if (match(TokenType::NUMBER)) {
             Token t=expect(TokenType::NUMBER);
             v.value=NUMBER;
-            v.num=std::stod(t.value);
+            v.num=to_number(t.value);
             return v;
         } else if (match(TokenType::PUNCTUATOR,"{")) {
             return JSONObject();
@@ -116,21 +159,19 @@ class JsonParser {
         } else if (match(TokenType::TK_ERR)) {
             throw std::runtime_error("Error token found");
         }
-        Token t=l.gettoken();
+        Token t=gettoken();
         throw std::runtime_error("Unexpected value found: "+tokenToString(t));
     }
 public:
-    JsonParser(std::istream& stream): l(stream) {}
-    JsonParser(const std::string& str): l(str) {}
-    Value ParseJSON() {
-        next();
-        Value out;
-        try {
-            out=JSONValue();
-            expect(TokenType::TK_EOF);
-        } catch (...) {
-            out.value=INVALID;
-        }
-        return out;
+    JSONParser(std::vector<Token>& ref,int start,int end): start(start),end(end),tokens(ref),cur(start) {
+        
+    }
+    Value parse() {
+        return JSONValue();
     }
 };
+
+Value JSON::parse() {
+    JSONParser jp(tokens,0,tokens.size());
+    return jp.parse();
+}

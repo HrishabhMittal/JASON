@@ -17,8 +17,7 @@ struct Token {
     std::string value;
     int64_t lineno;
     int64_t startindex;
-    const std::string* line;
-
+    const std::string* line=nullptr;
 };
 
 std::string tokenToString(const Token& tok) {

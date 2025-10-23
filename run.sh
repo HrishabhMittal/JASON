@@ -1,11 +1,8 @@
-#/bin/bash
-
+#!/bin/bash
 make
-for i in ./tests/json-checker/*; do
-    echo ----------------------------------------------
-    echo ---------------------FILE---------------------
-    echo checking on $i
-    # cat $i
-    echo ------------------CODE OUTPUT-----------------
-    ./main $i
+time for file in ./tests/*; do
+    ./main "$file"
+done
+time for file in ./tests/*; do 
+    jq -e . < "$file" > /dev/null 2>&1
 done
